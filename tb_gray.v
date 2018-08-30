@@ -5,7 +5,7 @@ reg clk, rst, valid_in, sof_in;
 reg [7:0] data_in;
 wire busy_out, valid_out, sof_out;
 reg busy_in;
-
+wire [7:0] data_out;
 
 datapath_gray dut(
     .i_clk(clk),
@@ -91,6 +91,30 @@ initial begin
     busy_in = 1;
     #100
     @(posedge clk);
+    busy_in = 0;
+    valid_in = 1;
+    data_in = 8'h1F;
+    @(posedge clk);
+    data_in = 8'h3F;
+    @(posedge clk);
+    data_in = 8'h7F;
+        @(posedge clk);
+    busy_in = 0;
+    valid_in = 1;
+    data_in = 8'h1F;
+    @(posedge clk);
+    data_in = 8'h3F;
+    @(posedge clk);
+    data_in = 8'h7F;
+        @(posedge clk);
+    busy_in = 0;
+    valid_in = 1;
+    data_in = 8'h1F;
+    @(posedge clk);
+    data_in = 8'h3F;
+    @(posedge clk);
+    data_in = 8'h7F;
+        @(posedge clk);
     busy_in = 0;
     valid_in = 1;
     data_in = 8'h1F;

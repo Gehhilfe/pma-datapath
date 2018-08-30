@@ -9,9 +9,9 @@ module datapath_gray #(
     input wire sof_in,
     output wire busy_out,
 
-    output reg [7:0] data_out,
-    output reg valid_out,
-    output reg sof_out,
+    output wire [7:0] data_out,
+    output wire valid_out,
+    output wire sof_out,
     input wire busy_in
 );
 
@@ -37,9 +37,9 @@ localparam lp_result_out_delay_bits = 6;
 reg [lp_pipe_color_ctr_bits-1:0] pipe_color_ctr;
 reg [lp_result_out_delay_bits-1:0] pipe_result_delay;
 
-wire [5:0] red_constant = 8;
-wire [6:0] green_constant = 4;
-wire [3:0] blue_constant = 4;
+wire [5:0] red_constant = 19;
+wire [6:0] green_constant = 75;
+wire [3:0] blue_constant = 3;
 
 
 // MUX Constant to mul
@@ -102,9 +102,25 @@ always @(*) begin
     {blue_en, green_en, red_en} <= pipe_color_ctr[lp_pipe_color_ctr_bits-1:lp_pipe_color_ctr_bits-3];
 end
 
+
+shiftbuffer #(
+	.p_stages(18),
+	.p_width(9)
+) end_shifter (
+	.i_clk(i_clk),
+	.i_rst(i_rst),
+	.i_stall(stalled),
+	.in({gray, r_sof_delay[lp_sof_delay-1]}),
+	.in_valid(pipe_result_delay[lp_result_out_delay_bits-1]),
+	.out({data_out, sof_out}),
+	.out_valid(valid_out)
+);
+
 always @(posedge i_clk) begin
     if (i_rst) begin
         r_color_ctr <= 3'b001;
+        pipe_result_delay <= 0;
+        pipe_color_ctr <= 0;
     end // if (i_rst)
     else begin
         if(!stalled && valid_in) begin
@@ -122,20 +138,6 @@ always @(posedge i_clk) begin
         if(red_en)   r_red   <= a_mul_q[7+8-1 -: 8];
         if(green_en) r_green <= a_mul_q[7+8-1 -: 8];
         if(blue_en)  r_blue  <= a_mul_q[7+8-1 -: 8];
-
-        if(pipe_result_delay[lp_result_out_delay_bits-1]) begin
-            r_data_out <= {r_data_out[(lp_dataout_buffer_len-1)*8-1:0], gray};
-            r_data_out_valid <= {r_data_out_valid[lp_dataout_buffer_len-2:0], 1'b1};
-            r_data_out_sof <= {r_data_out_sof[lp_dataout_buffer_len-2:0], r_sof_delay[lp_sof_delay-1]};
-        end else if(!stalled) begin
-            r_data_out <= {r_data_out[(lp_dataout_buffer_len-1)*8-1:0], 8'b0};
-            r_data_out_valid <= {r_data_out_valid[lp_dataout_buffer_len-2:0], 1'b0};
-            r_data_out_sof <= {r_data_out_sof[lp_dataout_buffer_len-2:0], 1'b0};
-
-            data_out <= r_data_out[(lp_dataout_buffer_len)*8-1-:8];
-            valid_out <= r_data_out_valid[lp_dataout_buffer_len-1];
-            sof_out <= r_data_out_sof[lp_dataout_buffer_len-1];
-        end // end else if(!stalled)
     end // else
 end
 
