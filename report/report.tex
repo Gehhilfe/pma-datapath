@@ -112,9 +112,9 @@ for i = 1:rows(I)
 		r = rf * uI(i,j,1);
 		g = gf * uI(i,j,2);
 		b = bf * uI(i,j,3);
-		J(i,j) = uint8(bitshift(r, -bits(1))) 
+		J(i,j) = min(uint8(bitshift(r, -bits(1))) 
 			+ uint8(bitshift(g, -bits(2))) 
-			+ uint8(bitshift(b, -bits(3)));
+			+ uint8(bitshift(b, -bits(3))), uint8(255));
 	endfor
 endfor
 endfunction
@@ -123,22 +123,61 @@ endfunction
 
     \subsection{Error Evaluation}
 
-	The total error of rgb to grayscale conversion is a combination of the indepandant transformation for each channel. The total worst case error is the sum of all three partial worst case errors. Therefore to decide how many bits precision are need for each color channel, we did an error evaluation of each channel. For this we used three different metrices: Maximum Difference, Maximum Weighted Difference and Root Mean Square Error (RMSE)
+	The total error of rgb to grayscale conversion is a combination of the independent transformation for each channel. The total worst case error is the sum of all three partial worst case errors. Therefore to decide how many bits precision are need for each color channel, we did an error evaluation of each channel. For this we used three different metrics: Maximum Difference, Maximum Weighted Difference and Root Mean Square Error (RMSE)
 
 \paragraph{}
-The Maximum Weigted Difference describes the error for a total converted image better then the other metrices. Because the total error of each channel doesnt effect the total error equal. The total error contribution is depends on the used conversion factors for each channel.
+The Maximum Weighted Difference describes the error for a total converted image better then the other metrics. Because the total error of each channel does not effect the total error equal. The total error contribution is depends on the used conversion factors for each channel.
 \begin{align*}
  \textbf{intensity} &= 0.29894*r + 0.58704*g + 0.11402*b
 \end{align*}
 
 
-Therefore the green channel twice the error contribution then the red channel and six times the contribution to the blue channel. Because this asymetric error contribution we choosed an asymetric bit precision for each channel. We used for the green channel 7 Bit precision conversion factor, red channel 6 Bit precision conversion factor and for the blue channel only a 5 Bit precision conversion factor.
+Therefore the green channel twice the error contribution then the red channel and six times the contribution to the blue channel. Because this asymmetric error contribution we chose an asymmetric bit precision for each channel. We used for the green channel 7 Bit precision conversion factor, red channel 6 Bit precision conversion factor and for the blue channel only a 5 Bit precision conversion factor.
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=\textwidth]{gray_error} 
-  \caption{Maximum difference, weigthed maximum difference and RMS Error comparing octave rgb2gray and our implementation.}
+  \caption{Maximum difference, weighted maximum difference and RMS Error comparing octave rgb2gray and our implementation.}
 \end{figure}
 
+
+\subsection{C Implementation}
+
+For the c implementation we used a straight forward two dimensional for loop that applies our conversion for each pixel. The rgb2gray function uses the same algorithm as our octave implementation. For validation we exported an small 15x15 image with octave as a constant static input array and printing the resulting array with printf. Therefor we could compare the results for all execution targets.
+
+For dynamic code evaluation we used following 
+\begin{lstlisting}
+grep -n "cpu0" perf-transcript | awk '{print $7}' | sort | uniq -c | sort -hr
+\end{lstlisting}
+
+\begin{minipage}{\linewidth}
+	\begin{lstlisting}[language=C]
+	static inline uint8_t rgb2gray(const uint8_t *p) {
+		const uint16_t Rc = 19; //0b0.010011
+		const uint16_t Gc = 75; //0b0.1001011
+		const uint16_t Bc = 3;  //0b0.00011
+		uint16_t nR = (uint16_t)((Rc*p[0])>>6);
+		uint16_t nG = (uint16_t)((Gc*p[1])>>7);
+		uint16_t nB = (uint16_t)((Bc*p[2])>>5);
+		uint16_t res = nR + nG + nB;
+		return (res > 255)?(uint8_t)0xFF:(uint8_t)res;
+	}
+	
+	int main(int argc, const char **argv) {
+		uint8_t i,j;
+		uint8_t result[WIDTH*HEIGHT];
+		uint8_t *p = (uint8_t *)&input;
+		for(i = 0; i < WIDTH; ++i)
+			for(j = 0; j < HEIGHT; ++j)
+				result[i+j*WIDTH] = rgb2gray(&p[i*3+j*WIDTH*3]);
+	
+		__asm__ volatile (
+			"\t ta 0 \n"
+			"\t nop \n"
+			"\t nop \n"
+		);
+	}
+	\end{lstlisting}
+\end{minipage}
 
 \end{document}
