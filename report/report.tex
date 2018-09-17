@@ -11,7 +11,7 @@
 
 \lstset{ 
 	backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
-	basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+	basicstyle=\tiny,        % the size of the fonts that are used for the code
 	breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
 	breaklines=true,                 % sets automatic line breaking
 	captionpos=b,                    % sets the caption-position to bottom
@@ -97,20 +97,16 @@
 		gf &= 0.58704_{10} \approx  0.10010110010010000100_{2} = 615556_{10} * 2^{-20} \\
 		bf &= 0.11402_{10} \approx  0.00011101001100000111_{2} = 119559_{10} * 2^{-20} \\
 	\end{align*}
-	To test how different precisions for each factor perform we implemented a following octave function. The function takes an image and a 3x1 vector describing the bit precision for each factor from max 20 to 0. With this function we can test arbitrary bit combinations. 
+	
+	To test how different precisions for each factor perform we implemented a following octave function. The function takes an image and a 3x1 vector describing the bit precision for each factor from max 20 to 0. With this function we can test arbitrary bit length combinations.
+
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
 function [J] = ui8rgb2gray (I, bits)
-
-rmbits = bits(1)-20;
-gmbits = bits(2)-20;
-bmbits = bits(3)-20;
-
-rf = bitshift(uint64(313461), rmbits);  # 0.01001100100001110101
-gf = bitshift(uint64(615556), gmbits);  # 0.10010110010010000100
-bf = bitshift(uint64(119559), bmbits);  # 0.00011101001100000111
-
+rf = bitshift(uint64(313461), bits(1)-20);  # 0.01001100100001110101
+gf = bitshift(uint64(615556), bits(2)-20);  # 0.10010110010010000100
+bf = bitshift(uint64(119559), bits(3)-20);  # 0.00011101001100000111
 uI = uint64(I);
-
 for i = 1:rows(I)
 	for j = 1:columns(I)
 		r = rf * uI(i,j,1);
@@ -121,8 +117,28 @@ for i = 1:rows(I)
 			+ uint8(bitshift(b, -bits(3)));
 	endfor
 endfor
-
 endfunction
 \end{lstlisting}
-	
+\end{minipage}	
+
+    \subsection{Error Evaluation}
+
+	The total error of rgb to grayscale conversion is a combination of the indepandant transformation for each channel. The total worst case error is the sum of all three partial worst case errors. Therefore to decide how many bits precision are need for each color channel, we did an error evaluation of each channel. For this we used three different metrices: Maximum Difference, Maximum Weighted Difference and Root Mean Square Error (RMSE)
+
+\paragraph{}
+The Maximum Weigted Difference describes the error for a total converted image better then the other metrices. Because the total error of each channel doesnt effect the total error equal. The total error contribution is depends on the used conversion factors for each channel.
+\begin{align*}
+ \textbf{intensity} &= 0.29894*r + 0.58704*g + 0.11402*b
+\end{align*}
+
+
+Therefore the green channel twice the error contribution then the red channel and six times the contribution to the blue channel. Because this asymetric error contribution we choosed an asymetric bit precision for each channel. We used for the green channel 7 Bit precision conversion factor, red channel 6 Bit precision conversion factor and for the blue channel only a 5 Bit precision conversion factor.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{gray_error} 
+  \caption{Maximum difference, weigthed maximum difference and RMS Error comparing octave rgb2gray and our implementation.}
+\end{figure}
+
+
 \end{document}
