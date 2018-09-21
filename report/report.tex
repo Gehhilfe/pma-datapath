@@ -43,13 +43,13 @@
 }
 \begin{document}
 	
-	\title{Processor Microarchitecture}
+	\title{Processor Microarchitecture Exercise Report}
 	\author{Tim Burkert}
 	
 	\maketitle
 	
 	\begin{abstract}
-		Report, results and evaluation of practical exercises done during Processor Microarchitecture lecture.
+		Report, results and evaluation of practical exercises done during processor microarchitecture lecture.
 	\end{abstract}
 	
 	\section{Exercise Description}
@@ -148,139 +148,117 @@ Therefore the green channel twice the error contribution then the red channel an
 
 \subsection{C Implementation}
 
-For the c implementation we used a straight forward two dimensional for loop that applies our conversion for each pixel. The rgb2gray function uses the same algorithm as our octave implementation. For validation we exported an small 15x15 image with octave as a constant static input array and printing the resulting array with printf. Therefor we could compare the results for all execution targets. For dynamic code evaluation we used following bash command:
+For the C implementation we used a straight forward two dimensional for loop that applies our conversion for each pixel. The rgb2gray function uses the same algorithm as our octave implementation. For validation we exported an small 15x15 image with octave as a constant static input array and printing the resulting array with printf. Therefor we could compare the results for all execution targets. For dynamic code evaluation we used following bash command:
 
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
 grep -n "cpu0" perf-transcript | awk '{print $7}' | sort | uniq -c | sort -hr
 \end{lstlisting}
-
-\begin{minipage}{\linewidth}
-	\begin{lstlisting}[language=C]
-	static inline uint8_t rgb2gray(const uint8_t *p) {
-		const uint16_t Rc = 19; //0b0.010011
-		const uint16_t Gc = 75; //0b0.1001011
-		const uint16_t Bc = 3;  //0b0.00011
-		uint8_t nR = (uint8_t)((Rc*p[0])>>6);
-		uint8_t nG = (uint8_t)((Gc*p[1])>>7);
-		uint8_t nB = (uint8_t)((Bc*p[2])>>5);
-		uint8_t res = nR + nG + nB;
-		return res;
-	}
-	\end{lstlisting}
 \end{minipage}
 
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=C]
+static inline uint8_t rgb2gray(const uint8_t *p) {
+	const uint16_t Rc = 19; //0b0.010011
+	const uint16_t Gc = 75; //0b0.1001011
+	const uint16_t Bc = 3;  //0b0.00011
+	uint8_t nR = (uint8_t)((Rc*p[0])>>6);
+	uint8_t nG = (uint8_t)((Gc*p[1])>>7);
+	uint8_t nB = (uint8_t)((Bc*p[2])>>5);
+	uint8_t res = nR + nG + nB;
+	return res;
+}
+\end{lstlisting}
+\end{minipage}
 
-
-\begin{table}[h]
-	\tiny
-	\begin{center}
-	\begin{tabular}{|l | r|}
-		\hline
-		   5742 & add \\
-		4416 & mov \\
-		3064 & ld \\
-		2952 & subcc \\
-		2755 & ldub \\
-		2378 & sll \\
-		2036 & and \\
-		2006 & st \\
-		1399 & nop \\
-		1239 & srl \\
-		1200 & stb \\
-		858 & be \\
-		690 & sth \\
-		684 & lduh \\
-		675 & sra \\
-		675 & smul \\
-		662 & sub \\
-		652 & bleu \\
-		620 & ba \\
-		585 & std \\
-		479 & call \\
-		459 & save \\
-		449 & restore \\
-		397 & clr \\
-		396 & bgu \\
-		328 & ldd \\
-		301 & sethi \\
-		298 & or \\
-		258 & bl \\
-		254 & retl \\
-		224 & ret \\
-		220 & be,a \\
-		203 & bne,a \\
-		200 & andcc \\
-		192 & bge \\
-		183 & bleu,a \\
-		133 & bne \\
-		16 & clrb \\
-		8 & andn \\
-		5 & ba,a \\
-		3 & jmpl \\
-		3 & jmp \\
-		3 & ble \\
-		2 & ta \\
-		1 & sta \\
-		1 & flush \\
-		1 & bg \\
-		1 & bcc \\
-		\hline
-	\end{tabular}
-	\end{center}
-\end{table}
+The result of dynamic tracing is attach as a file. Each instruction not executed and therefore not needed can be dropped. This simplifies the processor pipeline, but also restricts the functionality. These kind of optimization are only feasible for a FPGA, because removed instructions can be added again. 
 
 \subsection{Datapath}
+The mayor problem for the datapath construction is that the assigned amount of adders and multipliers are limited and free running. The consuming side of each pipeline can stall the processing at any time. Therefore there is two solution to consumer stall problem.
+\begin{itemize}
+	\item Free running pipeline with a consecutive memory element that can store all remaining intermediate result.
+	
+	\item Abstract the free running operators with a restore after stall logic. E.g. during a stall feed values in a cycle.  
+\end{itemize}
 
-\begin{tikzpicture}[node distance=1cm, auto, >=latex']
-	\node [] (inr) {$r$};
-	\node [below= 2cm of inr] (cr) {$r_{faktor}$};
-	\node [below= 3cm of inr] (ing) {$g$};
-	\node [below= 2cm of ing] (cg) {$g_{faktor}$};
-	\node [below= 3cm of ing] (inb) {$b$};
-	\node [below= 2cm of inb] (cb) {$c_{faktor}$};
-	\node [draw, circle, below right= of inr] (mulr) {$\times$};
-	\node [draw, rectangle, right= 0cm of mulr, minimum height=0.6cm] (mulr1) {}; 
-	\node [draw, rectangle, right= 0cm of mulr1, minimum height=0.6cm] (mulr2) {};
-	\node [draw, rectangle, right= 0cm of mulr2, minimum height=0.6cm] (mulr3) {};
-	\node [draw, rectangle, right= 0cm of mulr3, minimum height=0.6cm] (mulr4) {};
-	\node [draw, circle, below right= of ing] (mulg) {$\times$}; 
-	\node [draw, rectangle, right= 0cm of mulg, minimum height=0.6cm] (mulg1) {}; 
-	\node [draw, rectangle, right= 0cm of mulg1, minimum height=0.6cm] (mulg2) {};
-	\node [draw, rectangle, right= 0cm of mulg2, minimum height=0.6cm] (mulg3) {};
-	\node [draw, rectangle, right= 0cm of mulg3, minimum height=0.6cm] (mulg4) {};
-	\node [draw, circle, below right= of inb] (mulb) {$\times$}; 
-	\node [draw, rectangle, right= 0cm of mulb, minimum height=0.6cm] (mulb1) {}; 
-	\node [draw, rectangle, right= 0cm of mulb1, minimum height=0.6cm] (mulb2) {};
-	\node [draw, rectangle, right= 0cm of mulb2, minimum height=0.6cm] (mulb3) {};
-	\node [draw, rectangle, right= 0cm of mulb3, minimum height=0.6cm] (mulb4) {};
-	\draw [->] (inr) -- (mulr);
-	\draw [->] (cr) -- (mulr);
-	\draw [->] (ing) -- (mulg);
-	\draw [->] (cg) -- (mulg);
-	\draw [->] (inb) -- (mulb);
-	\draw [->] (cb) -- (mulb);
-	
-	\node[draw, circle, below right= 1.25cm and 2cm of mulg3] (addgb) {$+$};
-	\node [draw, rectangle, right= 0cm of addgb, minimum height=0.6cm] (addgb1) {}; 
-	\node [draw, rectangle, right= 0cm of addgb1, minimum height=0.6cm] (addgb2) {};
-	\node [draw, rectangle, right= 0cm of addgb2, minimum height=0.6cm] (addgb3) {};
-	\draw [->] (mulb4) -- ++ (0.5cm,0) -- (addgb);
-	\draw [->] (mulg4) -- ++ (0.5cm,0) -- (addgb);
-	
-	
-	\node [draw, rectangle, above= 4.725cm of addgb1, minimum height=0.6cm] (mulr5) {}; 
-	\node [draw, rectangle, right= 0cm of mulr5, minimum height=0.6cm] (mulr6) {};
-	\node [draw, rectangle, right= 0cm of mulr6, minimum height=0.6cm] (mulr7) {};
-	\draw [->] (mulr4) -- ++ (0.5cm,0) -- (mulr5);
-	
-	\node[draw, circle, below right= 2.5cm and 2cm of mulr5] (sum) {$+$};
-	
-	\draw [->] (mulr7) -- ++ (0.5cm,0) -- (sum);
-	\draw [->] (addgb3) -- ++ (0.5cm,0) -- (sum);
-	
-	\node[right= of sum] (out) {$intensity$};
-	\draw [->] (sum) -- (out);
-\end{tikzpicture}
+ \begin{figure}[h]
+	\centering
+	\begin{tikzpicture}[node distance=1cm, auto, >=latex']
+		\node [] (inr) {$r$};
+		\node [below= 2cm of inr] (cr) {$r_{faktor}$};
+		\node [below= 3cm of inr] (ing) {$g$};
+		\node [below= 2cm of ing] (cg) {$g_{faktor}$};
+		\node [below= 3cm of ing] (inb) {$b$};
+		\node [below= 2cm of inb] (cb) {$c_{faktor}$};
+		\node [draw, circle, below right= of inr] (mulr) {$\times$};
+		\node [draw, rectangle, right= 0cm of mulr, minimum height=0.6cm] (mulr1) {}; 
+		\node [draw, rectangle, right= 0cm of mulr1, minimum height=0.6cm] (mulr2) {};
+		\node [draw, rectangle, right= 0cm of mulr2, minimum height=0.6cm] (mulr3) {};
+		\node [draw, rectangle, right= 0cm of mulr3, minimum height=0.6cm] (mulr4) {};
+		\node [draw, circle, below right= of ing] (mulg) {$\times$}; 
+		\node [draw, rectangle, right= 0cm of mulg, minimum height=0.6cm] (mulg1) {}; 
+		\node [draw, rectangle, right= 0cm of mulg1, minimum height=0.6cm] (mulg2) {};
+		\node [draw, rectangle, right= 0cm of mulg2, minimum height=0.6cm] (mulg3) {};
+		\node [draw, rectangle, right= 0cm of mulg3, minimum height=0.6cm] (mulg4) {};
+		\node [draw, circle, below right= of inb] (mulb) {$\times$}; 
+		\node [draw, rectangle, right= 0cm of mulb, minimum height=0.6cm] (mulb1) {}; 
+		\node [draw, rectangle, right= 0cm of mulb1, minimum height=0.6cm] (mulb2) {};
+		\node [draw, rectangle, right= 0cm of mulb2, minimum height=0.6cm] (mulb3) {};
+		\node [draw, rectangle, right= 0cm of mulb3, minimum height=0.6cm] (mulb4) {};
+		\draw [->] (inr) -- (mulr);
+		\draw [->] (cr) -- (mulr);
+		\draw [->] (ing) -- (mulg);
+		\draw [->] (cg) -- (mulg);
+		\draw [->] (inb) -- (mulb);
+		\draw [->] (cb) -- (mulb);
+		
+		\node[draw, circle, below right= 1.25cm and 2cm of mulg3] (addgb) {$+$};
+		\node [draw, rectangle, right= 0cm of addgb, minimum height=0.6cm] (addgb1) {}; 
+		\node [draw, rectangle, right= 0cm of addgb1, minimum height=0.6cm] (addgb2) {};
+		\node [draw, rectangle, right= 0cm of addgb2, minimum height=0.6cm] (addgb3) {};
+		\draw [->] (mulb4) -- ++ (0.5cm,0) -- (addgb);
+		\draw [->] (mulg4) -- ++ (0.5cm,0) -- (addgb);
+		
+		
+		\node [draw, rectangle, above= 4.725cm of addgb1, minimum height=0.6cm] (mulr5) {}; 
+		\node [draw, rectangle, right= 0cm of mulr5, minimum height=0.6cm] (mulr6) {};
+		\node [draw, rectangle, right= 0cm of mulr6, minimum height=0.6cm] (mulr7) {};
+		\draw [->] (mulr4) -- ++ (0.5cm,0) -- (mulr5);
+		
+		\node[draw, circle, below right= 2.5cm and 2cm of mulr5] (sum) {$+$};
+		
+		\draw [->] (mulr7) -- ++ (0.5cm,0) -- (sum);
+		\draw [->] (addgb3) -- ++ (0.5cm,0) -- (sum);
+		
+		\node[right= of sum] (out) {$intensity$};
+		\draw [->] (sum) -- (out);
+	\end{tikzpicture}
+  \caption{RGB to grayscale intensity freeruning conversion pipeline}
+\end{figure}
+
+\pagebreak
+
+\subsection{Decoupling Processing Stages with Shift Registers}
+
+Shift Registers with intelligent clock enables can be used as an queue that doesn't need counters like a FIFO. I decided to use this kind of decoupling to fulfill adder limitation. For a efficient FIFO implementation with high bandwidth single cycle counters are needed.
+
+\paragraph{Proposed decoupling shift register}
+My proposed shift register works in two modes stalled and non stalled. For each data word register there is also a valid register. During non stall cycles elements are inserted at first taken space in the shift register chain and all stored value staring at this place to end are shifted. As opposite during stall cycles elements are added in the first space and all registers until the first invalid registers are shifted forward. The proposed decoupling element preserves sorting because at every time elements are added before the first all ready stored element. During non stall cycles the amount of stored elements stay constant, but free spaces is moved to the front. The amount of elements that can be stored during a stall increases.
 
 \subsection{SLC Implementation}
+The SLC implementation is a straight forward conversion of the C version. Because the grayscale conversion can be implemented embarrassingly parallel (map) by assign a micro thread to each pixel to convert. The thread index is used to load the input pixel color and to store after the conversion the intensity value.
+
+\section{Histogram}
+The computation of a histogram can be seen as a map reduce operation. Map converts a intensity to a bin index and the reduction counts the occurrence of each index. The map operation is again embarrassingly parallel. 
+
+
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=C]
+static inline uint8_t maptobin(uint8_t p) {
+	uint16_t bin = ((uint16_t)p) * (BINS-1);
+	bin = (bin >> 8) + ((bin >> 7) & 1);
+	return (uint8_t)bin;
+}
+\end{lstlisting}
+\end{minipage}
 \end{document}
