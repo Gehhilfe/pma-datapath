@@ -251,6 +251,13 @@ The SLC implementation is a straight forward conversion of the C version. Becaus
 \section{Histogram}
 The computation of a histogram can be seen as a map reduce operation. Map converts a intensity to a bin index and the reduction counts the occurrence of each index. The map operation is again embarrassingly parallel. 
 
+\subsection{Fix Point}
+
+The double precision value to bin map functions uses following equation: 
+
+$f(x,b) = round(x*(b-1)/255.0)$
+
+The rounding can be solved be using one bit more precision then needed, therefore the result would be fixed point number with single bit after the decimal point. This bit is one if decimal part is $0.5$ or larger. If this bit is one we easily add one to the integer part. Problematic is the division by $255_{10}=11111111_2$ this can not be implemented with a simple shift. It could be implemented by iterative shifting and subtraction. 
 
 \begin{minipage}{\linewidth}
 \begin{lstlisting}[language=C]
@@ -261,4 +268,25 @@ static inline uint8_t maptobin(uint8_t p) {
 }
 \end{lstlisting}
 \end{minipage}
+
+\subsection{Error Evaluation}
+
+We used in our fix point implementation division by 256 via a simple shift by 8. Because of this difference we assign some values to a lower bin. But for bin values $2^n+1 = {1,2,5,9,17,33,65,129}$ we get exactly the same result.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\linewidth]{histoerror}
+	\caption{Mean Absolute Error over the 8 Bit value range.}
+\end{figure}
+
+\subsection{Datapath}
+
+The datapath for the histogram computation is split in two parts. The map part converting intensity values to bins and the reduction part counting bin occurrence. 
+
+\paragraph{Map}
+
+For the map part i used the same approach as before for the grayscale conversion. A free running pipeline with consecutive shift register decoupler. The pipeline consists of a single multiplier following an adder implementing the rounding. Input for the multiplier is the fixed value $BIN-1$ and the current intensity pixel. Input for the adder is the result of the multiplier shift by 8 and the result shifted by 7 bitwise and 1. This is equivalent to the C implementation. 
+
+\paragraph{Reduce}
+
 \end{document}
