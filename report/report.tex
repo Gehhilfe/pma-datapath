@@ -140,9 +140,10 @@ Therefore the green channel twice the error contribution then the red channel an
 
 \subsection{C Implementation}
 
-For the C implementation we used a straight forward two dimensional for loop that applies our conversion for each pixel. The rgb2gray function uses the same algorithm as our octave implementation. For validation we exported an small 15x15 image with octave as a constant static input array and printing the resulting array with printf. Therefor we could compare the results for all execution targets. For dynamic code evaluation we used following bash command:
+For the c implementation we used a straight forward two dimensional for loop that applies our conversion for each pixel. The rgb2gray function uses the same algorithm as our octave implementation. For validation we exported an small 15x15 image with octave as a constant static input array and printing the resulting array with printf. Therefor we could compare the results for all execution targets. For dynamic code tracing we used following bash script to count which and how many instructions are executed.
 
 \begin{minipage}{\linewidth}
+
 \begin{lstlisting}
 grep -n "cpu0" perf-transcript | awk '{print $7}' | sort | uniq -c | sort -hr
 \end{lstlisting}
@@ -265,7 +266,7 @@ static inline uint8_t maptobin(uint8_t p) {
 We used in our fix point implementation division by 256 via a simple shift by 8. Because of this difference we assign some values to a lower bin. But for bin values $2^n+1 = {1,2,5,9,17,33,65,129}$ we get exactly the same result.
 \begin{figure}[h!]
 	\centering
-	\includegraphics[width=0.4\linewidth]{histoerror}
+	%\includegraphics[width=0.4\linewidth]{histoerror}
 	\caption{Mean Absolute Error over the 8 Bit value range.}
 \end{figure}
 
