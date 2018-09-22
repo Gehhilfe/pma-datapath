@@ -17,7 +17,7 @@
 \lstset{ 
 	backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
 	basicstyle=\tiny,        % the size of the fonts that are used for the code
-	breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+	breakatwhitespace=true,         % sets if automatic breaks should only happen at whitespace
 	breaklines=true,                 % sets automatic line breaking
 	captionpos=b,                    % sets the caption-position to bottom
 	commentstyle=\color{mygreen},    % comment style
@@ -91,8 +91,7 @@
 		
 		\item Analyze micro-threaded in-order execution \\
 		Convert the C program to the SLC language or by hand to the microthreaded assembly. \\
-		Execute in UTLEON3 – ModelSim, SP605 \\
-		Profile execution in ModelSim, identify bottlenecks and restructure the program accordingly \\
+		Profile execution in ModelSim, identify bottlenecks and restructure the program \\
 	\end{description}
 	
 	\section{Color Conversion}
@@ -102,10 +101,8 @@
 		gf &= 0.58704_{10} \approx  0.10010110010010000100_{2} = 615556_{10} * 2^{-20} \\
 		bf &= 0.11402_{10} \approx  0.00011101001100000111_{2} = 119559_{10} * 2^{-20} \\
 	\end{align*}
-	
 	To test how different precisions for each factor perform we implemented a following octave function. The function takes an image and a 3x1 vector describing the bit precision for each factor from max 20 to 0. With this function we can test arbitrary bit length combinations.
 
-\begin{minipage}{\linewidth}
 \begin{lstlisting}
 function [J] = ui8rgb2gray (I, bits)
 rf = bitshift(uint64(313461), bits(1)-20);  # 0.01001100100001110101
@@ -114,17 +111,12 @@ bf = bitshift(uint64(119559), bits(3)-20);  # 0.00011101001100000111
 uI = uint64(I);
 for i = 1:rows(I)
 	for j = 1:columns(I)
-		r = rf * uI(i,j,1);
-		g = gf * uI(i,j,2);
-		b = bf * uI(i,j,3);
-		J(i,j) = uint8(bitshift(r, -bits(1))) 
-			+ uint8(bitshift(g, -bits(2))) 
-			+ uint8(bitshift(b, -bits(3)));
+		r = rf * uI(i,j,1); g = gf * uI(i,j,2); b = bf * uI(i,j,3);
+		J(i,j) = uint8(bitshift(r, -bits(1))) + uint8(bitshift(g, -bits(2))) + uint8(bitshift(b, -bits(3)));
 	endfor
 endfor
 endfunction
 \end{lstlisting}
-\end{minipage}	
 
     \subsection{Error Evaluation}
 
@@ -183,24 +175,24 @@ The mayor problem for the datapath construction is that the assigned amount of a
 
  \begin{figure}[h]
 	\centering
-	\begin{tikzpicture}[node distance=1cm, auto, >=latex']
+	\begin{tikzpicture}[node distance=0.5cm, auto, >=latex']
 		\node [] (inr) {$r$};
-		\node [below= 2cm of inr] (cr) {$r_{faktor}$};
-		\node [below= 3cm of inr] (ing) {$g$};
-		\node [below= 2cm of ing] (cg) {$g_{faktor}$};
-		\node [below= 3cm of ing] (inb) {$b$};
-		\node [below= 2cm of inb] (cb) {$c_{faktor}$};
-		\node [draw, circle, below right= of inr] (mulr) {$\times$};
+		\node [below= 0.5cm of inr] (cr) {$r_{faktor}$};
+		\node [below= 2cm of inr] (ing) {$g$};
+		\node [below= 0.5cm of ing] (cg) {$g_{faktor}$};
+		\node [below= 2cm of ing] (inb) {$b$};
+		\node [below= 0.5cm of inb] (cb) {$c_{faktor}$};
+		\node [draw, circle, right= of inr] (mulr) {$\times$};
 		\node [draw, rectangle, right= 0cm of mulr, minimum height=0.6cm] (mulr1) {}; 
 		\node [draw, rectangle, right= 0cm of mulr1, minimum height=0.6cm] (mulr2) {};
 		\node [draw, rectangle, right= 0cm of mulr2, minimum height=0.6cm] (mulr3) {};
 		\node [draw, rectangle, right= 0cm of mulr3, minimum height=0.6cm] (mulr4) {};
-		\node [draw, circle, below right= of ing] (mulg) {$\times$}; 
+		\node [draw, circle, right= of ing] (mulg) {$\times$}; 
 		\node [draw, rectangle, right= 0cm of mulg, minimum height=0.6cm] (mulg1) {}; 
 		\node [draw, rectangle, right= 0cm of mulg1, minimum height=0.6cm] (mulg2) {};
 		\node [draw, rectangle, right= 0cm of mulg2, minimum height=0.6cm] (mulg3) {};
 		\node [draw, rectangle, right= 0cm of mulg3, minimum height=0.6cm] (mulg4) {};
-		\node [draw, circle, below right= of inb] (mulb) {$\times$}; 
+		\node [draw, circle, right= of inb] (mulb) {$\times$}; 
 		\node [draw, rectangle, right= 0cm of mulb, minimum height=0.6cm] (mulb1) {}; 
 		\node [draw, rectangle, right= 0cm of mulb1, minimum height=0.6cm] (mulb2) {};
 		\node [draw, rectangle, right= 0cm of mulb2, minimum height=0.6cm] (mulb3) {};
@@ -212,7 +204,7 @@ The mayor problem for the datapath construction is that the assigned amount of a
 		\draw [->] (inb) -- (mulb);
 		\draw [->] (cb) -- (mulb);
 		
-		\node[draw, circle, below right= 1.25cm and 2cm of mulg3] (addgb) {$+$};
+		\node[draw, circle, right= 2cm of mulg3] (addgb) {$+$};
 		\node [draw, rectangle, right= 0cm of addgb, minimum height=0.6cm] (addgb1) {}; 
 		\node [draw, rectangle, right= 0cm of addgb1, minimum height=0.6cm] (addgb2) {};
 		\node [draw, rectangle, right= 0cm of addgb2, minimum height=0.6cm] (addgb3) {};
@@ -220,12 +212,12 @@ The mayor problem for the datapath construction is that the assigned amount of a
 		\draw [->] (mulg4) -- ++ (0.5cm,0) -- (addgb);
 		
 		
-		\node [draw, rectangle, above= 4.725cm of addgb1, minimum height=0.6cm] (mulr5) {}; 
+		\node [draw, rectangle, right= 2cm of mulr4, minimum height=0.6cm] (mulr5) {}; 
 		\node [draw, rectangle, right= 0cm of mulr5, minimum height=0.6cm] (mulr6) {};
 		\node [draw, rectangle, right= 0cm of mulr6, minimum height=0.6cm] (mulr7) {};
 		\draw [->] (mulr4) -- ++ (0.5cm,0) -- (mulr5);
 		
-		\node[draw, circle, below right= 2.5cm and 2cm of mulr5] (sum) {$+$};
+		\node[draw, circle, right= 2cm of mulr5] (sum) {$+$};
 		
 		\draw [->] (mulr7) -- ++ (0.5cm,0) -- (sum);
 		\draw [->] (addgb3) -- ++ (0.5cm,0) -- (sum);
@@ -236,7 +228,6 @@ The mayor problem for the datapath construction is that the assigned amount of a
   \caption{RGB to grayscale intensity freeruning conversion pipeline}
 \end{figure}
 
-\pagebreak
 
 \subsection{Decoupling Processing Stages with Shift Registers}
 
@@ -251,7 +242,7 @@ The SLC implementation is a straight forward conversion of the C version. Becaus
 \section{Histogram}
 The computation of a histogram can be seen as a map reduce operation. Map converts a intensity to a bin index and the reduction counts the occurrence of each index. The map operation is again embarrassingly parallel. 
 
-\subsection{Fix Point}
+\subsection{Integer approximation}
 
 The double precision value to bin map functions uses following equation: 
 
@@ -272,10 +263,9 @@ static inline uint8_t maptobin(uint8_t p) {
 \subsection{Error Evaluation}
 
 We used in our fix point implementation division by 256 via a simple shift by 8. Because of this difference we assign some values to a lower bin. But for bin values $2^n+1 = {1,2,5,9,17,33,65,129}$ we get exactly the same result.
-
-\begin{figure}[h]
+\begin{figure}[h!]
 	\centering
-	\includegraphics[width=0.5\linewidth]{histoerror}
+	\includegraphics[width=0.4\linewidth]{histoerror}
 	\caption{Mean Absolute Error over the 8 Bit value range.}
 \end{figure}
 
@@ -288,5 +278,29 @@ The datapath for the histogram computation is split in two parts. The map part c
 For the map part i used the same approach as before for the grayscale conversion. A free running pipeline with consecutive shift register decoupler. The pipeline consists of a single multiplier following an adder implementing the rounding. Input for the multiplier is the fixed value $BIN-1$ and the current intensity pixel. Input for the adder is the result of the multiplier shift by 8 and the result shifted by 7 bitwise and 1. This is equivalent to the C implementation. 
 
 \paragraph{Reduce}
+
+The counting of the bin occurrence is done in a Dual Port BRAM, that is extended with a bypass register to solve concurrent read and write of the same address. Without this bypass register the old value would be read and not the new values. Now it is possible to pipeline the counting with the following behavior. Every cycle a incoming bin is read for the BRAM on one port and in every cycle the read value is stored incremented by one. After an reset or start of frame the BRAM must be reseted to zero, for this the incoming data is stalled until all bins are zeroed.
+
+
+\subsection{SLC Implementation}
+To separated the two parts of the histogram computation we are using a communication channel between a parent and succeeding threads. Again we are decomposing the parallel data to a single data point for a single thread. A thread consists of two parts the parallel map from value to bin and the synchronized reduction. For the communication between threads a single shared and dependent register is used through which a pointer to the histogram array is forward. A threads receives the pointer through the shared register. After that the thread reads the bin and stores it incremented and finally forwards the pointer. The section between receiving and forwarding forms a critical section and possible read before write conflicts are solved.
+
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=C]
+sl_def(histogram, void, sl_glparm(void*, glInput), sl_glparm(int, glBinMinusOne), sl_shparm(void*, shHistPtr))
+{
+	sl_index(i);
+	uint8_t *in = sl_getp(glInput);
+	uint16_t binMinusOne = sl_getp(glBinMinusOne);
+	uint16_t binMinusOne = ((uint16_t)in[i]) * (bins);
+	bin = (bin >> 8) + ((bin >> 7) & 1);
+	
+	uint8_t *histo = sl_getp(shHistPtr);
+	histo[bin] += 1;
+	sl_setp(shHistPtr, histo);
+}
+sl_enddef
+\end{lstlisting}
+\end{minipage}
 
 \end{document}
