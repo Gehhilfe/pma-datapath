@@ -266,7 +266,7 @@ static inline uint8_t maptobin(uint8_t p) {
 We used in our fix point implementation division by 256 via a simple shift by 8. Because of this difference we assign some values to a lower bin. But for bin values $2^n+1 = {1,2,5,9,17,33,65,129}$ we get exactly the same result.
 \begin{figure}[h!]
 	\centering
-	%\includegraphics[width=0.4\linewidth]{histoerror}
+	\includegraphics[width=0.4\linewidth]{histoerror}
 	\caption{Mean Absolute Error over the 8 Bit value range.}
 \end{figure}
 
