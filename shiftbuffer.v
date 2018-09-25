@@ -12,9 +12,9 @@ module shiftbuffer #(
 );
 
 reg [p_width*p_stages-1:0] shifter;
-reg [p_width*p_stages-1:0] shifter_new_stalled;
+reg [p_width*p_stages-1:0] shifter_new;
 reg [p_stages-1:0] valid_shifter;
-reg [p_stages-1:0] valid_shifter_new_stalled;
+reg [p_stages-1:0] valid_shifter_new;
 
 assign out_valid = valid_shifter[p_stages-1];
 assign out = shifter[p_width*p_stages-1 -: p_width];
@@ -22,29 +22,19 @@ assign out = shifter[p_width*p_stages-1 -: p_width];
 integer i;
 
 reg found;
+reg [p_stages-1:0] shiftstages;
 
 always @(*) begin
-	shifter_new_stalled = shifter;
-	valid_shifter_new_stalled = valid_shifter;
+	valid_shifter_new = valid_shifter;
+	shifter_new = shifter;
+	shiftstages = 0;
 	found = 0;
 	if(in_valid) begin
 		for(i=p_stages-1; i >= 0; i = i - 1) begin
-			if (!valid_shifter_new_stalled[i+1]) begin
-				shifter_new_stalled[(i+1)*p_width-1 -: p_width] = shifter[i*p_width-1-:p_width];
-				shifter_new_stalled[i*p_width-1 -: p_width] = 0;
-				valid_shifter_new_stalled[i+1] = valid_shifter[i];
-				valid_shifter_new_stalled[i] = 0;
-			end
-		end
-		shifter_new_stalled[p_width-1:0] = in;
-		valid_shifter_new_stalled[0] = 1;
-		for(i=0; i < p_stages-1; i = i + 1) begin
-			if (!valid_shifter_new_stalled[i]) begin
+			if (!valid_shifter_new[i] && !found) begin
 				found = 1;
-			end
-			if (found) begin
-				shifter_new_stalled[i*p_width-1 -: p_width] = shifter[i*p_width-1 -: p_width];
-				valid_shifter_new_stalled[i] = valid_shifter[i];
+				shifter_new[i*p_width +: p_width] = in;
+				valid_shifter_new[i] = 1;
 			end
 		end
 	end
@@ -56,16 +46,16 @@ always @(posedge i_clk) begin
 		valid_shifter <= 0;
 	end else begin
 		if (i_stall) begin
-			shifter <= shifter_new_stalled;
-			valid_shifter <= valid_shifter_new_stalled;
+			shifter <= shifter_new;
+			valid_shifter <= valid_shifter_new;
 		end else begin
-			if (in_valid) begin
-				shifter <= {shifter[p_width*(p_stages-1)-1:0], in};
-				valid_shifter <= {valid_shifter[(p_stages)-2:0], in_valid};
+			if(valid_shifter[p_stages-1]) begin
+				shifter <= {shifter_new[p_width*(p_stages-1)-1:0], {p_width{1'b0}}};
+				valid_shifter <= {valid_shifter_new[(p_stages)-2:0], 1'b0};
 			end else begin
-				shifter <= {shifter[p_width*(p_stages-1)-1:0], {p_width{1'b0}}};
-				valid_shifter <= {valid_shifter[(p_stages)-2:0], 1'b0};
-			end
+				shifter <= shifter_new;
+				valid_shifter <= valid_shifter_new;
+			end	
 		end
 	end
 end

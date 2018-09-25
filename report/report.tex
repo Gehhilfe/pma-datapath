@@ -304,4 +304,31 @@ sl_enddef
 \end{lstlisting}
 \end{minipage}
 
+\section{Sobel-Filter}
+
+\begin{equation*}
+G_x = S_x*A = \begin{bmatrix}
+1 & 0 & -1 \\
+2 & 0 & -2 \\
+1 & 0 & -1 \\
+\end{bmatrix} * A
+\end{equation*}
+\begin{equation*}
+G_y = S_y*A = \begin{bmatrix}
+1 & 2 & 1 \\
+0 & 0 & 0 \\
+-1 & -2 & -1 \\
+\end{bmatrix} * A
+\end{equation*}
+
+The Sobel-Operator is a stencil operation that computes gradient images. That can be used to implement an edge dection algorithm. The compute a single output value for the position $(x,y)$ the pixel and its eight neibourghs are neeed.
+
+I propose an offset access function $O((x_1,y_1),((x_2,y_2)) = (x_1+x_2,y_1+y_2)$ that i will used to simplfy the convolutions to a simpler equation. For this i also used follwoing simplfication: $A_{x,y}(P) = A(O((P),(x,y)))$
+\begin{equation*}
+G_x = A_{-1,-1} + 2 A_{-1,0} +  A_{-1,1} -  A_{1,-1} - 2 A_{1,0} -  A_{1,1}
+\end{equation*}
+\begin{equation*}
+G_y = A_{-1,-1} + 2 A_{0,-1} +  A_{1,-1} -  A_{-1,1} - 2 A_{0,1} -  A_{1,1}
+\end{equation*}
+
 \end{document}

@@ -12,50 +12,66 @@ Coverage Report Summary Data by file
     FSMs                                                       100.0
         States                       0         0         0     100.0
         Transitions                  0         0         0     100.0
-    Toggle Bins                     64         0        64       0.0
+    Toggle Bins                    128        58        70      45.3
 
 =================================================================================
-=== File: datapath_gray.v
+=== File: add3.v
 =================================================================================
     Enabled Coverage            Active      Hits    Misses % Covered
     ----------------            ------      ----    ------ ---------
-    Stmts                           26        26         0     100.0
-    Branches                        17        17         0     100.0
-    FEC Condition Terms              2         2         0     100.0
-    FEC Expression Terms             0         0         0     100.0
-    FSMs                                                       100.0
-        States                       0         0         0     100.0
-        Transitions                  0         0         0     100.0
-    Toggle Bins                    426       178       248      41.7
-
-=================================================================================
-=== File: mul.v
-=================================================================================
-    Enabled Coverage            Active      Hits    Misses % Covered
-    ----------------            ------      ----    ------ ---------
-    Stmts                            6         6         0     100.0
+    Stmts                           14        14         0     100.0
     Branches                         0         0         0     100.0
     FEC Condition Terms              0         0         0     100.0
     FEC Expression Terms             0         0         0     100.0
     FSMs                                                       100.0
         States                       0         0         0     100.0
         Transitions                  0         0         0     100.0
-    Toggle Bins                     64         0        64       0.0
+    Toggle Bins                    224       160        64      71.4
 
 =================================================================================
-=== File: tb_gray.v
+=== File: sobel_gx.sv
 =================================================================================
     Enabled Coverage            Active      Hits    Misses % Covered
     ----------------            ------      ----    ------ ---------
-    Stmts                           64        64         0     100.0
-    Branches                         0         0         0     100.0
+    Stmts                           46        46         0     100.0
+    Branches                        20        18         2      90.0
+    FEC Condition Terms              0         0         0     100.0
+    FEC Expression Terms             0         0         0     100.0
+    FSMs                                                        76.9
+        States                       5         5         0     100.0
+        Transitions                 13         7         6      53.8
+    Toggle Bins                    567       511        56      90.1
+
+=================================================================================
+=== File: sobel_gy.sv
+=================================================================================
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           46        46         0     100.0
+    Branches                        20        18         2      90.0
+    FEC Condition Terms              0         0         0     100.0
+    FEC Expression Terms             0         0         0     100.0
+    FSMs                                                        76.9
+        States                       5         5         0     100.0
+        Transitions                 13         7         6      53.8
+    Toggle Bins                    567       511        56      90.1
+
+=================================================================================
+=== File: sobel_tb.sv
+=================================================================================
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                          112       111         1      99.1
+    Branches                         2         1         1      50.0
     FEC Condition Terms              0         0         0     100.0
     FEC Expression Terms             0         0         0     100.0
     FSMs                                                       100.0
         States                       0         0         0     100.0
         Transitions                  0         0         0     100.0
-    Toggle Bins                     34        21        13      61.7
+    Toggle Bins                    190       189         1      99.4
 
 
-Total Coverage By File (code coverage only, filtered view): 83.4%
+TOTAL ASSERTION COVERAGE: 100.0%  ASSERTIONS: 2
+
+Total Coverage By File (code coverage only, filtered view): 87.4%
 
