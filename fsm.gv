@@ -1,0 +1,13 @@
+digraph finite_state_machine {
+	size="8,5"
+	node [shape = doublecircle]; IDLE;
+	node [shape = circle]; START_A START_B START_C START_D WAIT_A WAIT_B DONE;
+	IDLE -> START_A [label = "valid_in"];
+        START_A -> START_B;
+        START_B -> START_C [label = "wait_ctr <= 14"];
+        START_C -> START_D;
+        START_D -> WAIT_A;
+        WAIT_A -> WAIT_B [label = "wait_ctr == 0; wait_ctr <= 1; save_gx"];
+        WAIT_B -> DONE [label = "wait_ctr == 0; save_gy"];
+        DONE -> IDLE;
+}

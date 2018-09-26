@@ -1,10 +1,11 @@
 % !TeX spellcheck = en_US
-\documentclass[a4paper]{scrartcl}
+\documentclass[a4paper,fontsize=12pt]{scrartcl}
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{color}
 \usepackage{amsmath}
 \usepackage{tikz}
+\usepackage{tabularx}
 
 \usetikzlibrary{shapes, arrows, positioning}
 
@@ -43,7 +44,7 @@
 }
 \begin{document}
 	
-	\title{Processor Microarchitecture Exercise Report}
+	\title{Processor Microarchitecture Exercise Report SoSe 2018}
 	\author{Tim Burkert}
 	
 	\maketitle
@@ -286,7 +287,6 @@ The counting of the bin occurrence is done in a Dual Port BRAM, that is extended
 \subsection{SLC Implementation}
 To separated the two parts of the histogram computation we are using a communication channel between a parent and succeeding threads. Again we are decomposing the parallel data to a single data point for a single thread. A thread consists of two parts the parallel map from value to bin and the synchronized reduction. For the communication between threads a single shared and dependent register is used through which a pointer to the histogram array is forward. A threads receives the pointer through the shared register. After that the thread reads the bin and stores it incremented and finally forwards the pointer. The section between receiving and forwarding forms a critical section and possible read before write conflicts are solved.
 
-\begin{minipage}{\linewidth}
 \begin{lstlisting}[language=C]
 sl_def(histogram, void, sl_glparm(void*, glInput), sl_glparm(int, glBinMinusOne), sl_shparm(void*, shHistPtr))
 {
@@ -302,7 +302,6 @@ sl_def(histogram, void, sl_glparm(void*, glInput), sl_glparm(int, glBinMinusOne)
 }
 sl_enddef
 \end{lstlisting}
-\end{minipage}
 
 \section{Sobel-Filter}
 
@@ -330,5 +329,99 @@ G_x = A_{-1,-1} + 2 A_{-1,0} +  A_{-1,1} -  A_{1,-1} - 2 A_{1,0} -  A_{1,1}
 \begin{equation*}
 G_y = A_{-1,-1} + 2 A_{0,-1} +  A_{1,-1} -  A_{-1,1} - 2 A_{0,1} -  A_{1,1}
 \end{equation*}
+
+\section{C-Implementation}
+
+For the c implementation i used the algorithm described above. The resulting values have a signed range of $[-4\times255, 4\times255]$. To fit the signed back to an 8-Bit unsigned range of $[255,0]$, i shifted the negativ range to $0$ and scaled the range by $8$. Therefor a grandient result of $127_{10}$  means no gradient and results above this value mean a positive gradient and vice versa. The sobel algorith can be implemented without any multiplication by using shifts.
+
+\begin{lstlisting}[language=C]
+#define OFFSETACCESS(p, i, j, x, y) (p[(i+x) + (j+y)*HEIGHT])
+
+int main(int argc, const char **argv) {
+	int i, j;	
+	uint8_t EX[(WIDTH-2)][(HEIGHT-2)];
+	uint8_t EY[(WIDTH-2)][(HEIGHT-2)];
+	uint8_t ginput[WIDTH*HEIGHT];
+	for(i = 0; i < WIDTH*HEIGHT; ++i) {
+		ginput[i] = i%2*127;
+	}
+	
+	for(i = 1; i < WIDTH-1; ++i) {
+		for(j = 1; j < HEIGHT-1; j++) {
+			uint8_t p0 = OFFSETACCESS(ginput, i, j, -1, -1);
+			uint8_t p1 = OFFSETACCESS(ginput, i, j,  0, -1);
+			uint8_t p2 = OFFSETACCESS(ginput, i, j,  1, -1);
+			uint8_t p3 = OFFSETACCESS(ginput, i, j, -1,  0);
+			uint8_t p4 = OFFSETACCESS(ginput, i, j,  0,  0);
+			uint8_t p5 = OFFSETACCESS(ginput, i, j,  1,  0);
+			uint8_t p6 = OFFSETACCESS(ginput, i, j, -1,  1);
+			uint8_t p7 = OFFSETACCESS(ginput, i, j,  0,  1);
+			uint8_t p8 = OFFSETACCESS(ginput, i, j,  1,  1);
+			int16_t ex = (int16_t)p0 - p2 + 2*p3 - 2*p5 + p6 - p8;
+			int16_t ey = (int16_t)p0 + 2*p1 + p3 - p6 - 2*p7 - p8;
+			ex += 4*255;
+			ey += 4*255;
+			ex /= 8;
+			ey /= 8;
+			EX[i-1][j-1] = ex;
+			EY[i-1][j-1] = ey;
+		}
+	}
+}
+\end{lstlisting}
+
+\subsection{Datapath}
+
+The sobel datapath is split in to two stages. First, i developed a stencil module that transforms the linear stream of pixels to a stream of neighbouring pixel. Second, this stag parallel maps operation are connected converting the neighbouring pixels to the resulting $G_x$ or $G_y$ value.
+
+\paragraph{Conversion from sequetial pixel stream to parallel neighbour stream}
+
+For this i implemented a parameterizable conversion module with the following parameters:
+\begin{table}[h]
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Parameter} & \textbf{Description} \\ \hline
+\hline
+C\_ROW\_SIZE & The amount of pixels a single row \\ \hline
+p\_dataBits  & The bit width of a single pixel \\ \hline
+p\_rows      & The amount of neighbourhood row need to compute a single result \\ \hline
+p\_cols      & The amount of neighbourhood cols need to compute a single result \\ \hline
+\end{tabularx}
+\end{table}
+
+
+The conversion is done by using a shift register chain of $(C\_ROW\_SIZE-1)*p\_rows+p\_cols$ registers. The register chain stores pixel data, a valid flag and sof indicator. The first $p\_cols$ registers in each row is connected to the module output. On reset the registerchain is cleared.
+
+\paragraph{Applying $Gx$ and $Gy$}
+For the parallel  compution of $G_x$ and $G_y$ only three adders are used and none multipliers. From this three adders two are combinded to a three input adders with total latency of six. Four of the six time categories are used for the two postive and two negative partialsums(State Start\_A to Start\_D).  After that the unwind phase is entered. During unwind the last adder is used to do the value range conversion. This happends during the WAIT\_A and WAIT\_B state. The results are outputed during the DONE state until there are consumed. This module can only consume only one neighbourhood vector at a time and is not pipelined and each result computation takes 20 cycles.
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.5\textwidth]{circofsm.png} 
+  \caption{FSM used for computing $G_x$ and $G_y$ with only three adders.}
+\end{figure}
+
+\paragraph{Verfication}
+
+This datapath is partly written in Verilog and SystemVerilog to improve my SV verfication skills. For verification some edge cases are used and random inputs. As edge cases inputs with all pixel equal are used, these should all result in a $G_x = 127, G_y = 127$ result. All results are evaluated agains a gold standard computed by system verilog.
+
+\pagebreak
+
+\begin{lstlisting}
+=================================================================================
+=== File: sobel_gx_gy.sv
+=================================================================================
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           64        64         0     100.0
+    Branches                        31        29         2      93.5
+    FEC Condition Terms              0         0         0     100.0
+    FEC Expression Terms             0         0         0     100.0
+    FSMs                                                        75.0
+        States                       8         8         0     100.0
+        Transitions                 22        11        11      50.0
+    Toggle Bins                    611       559        52      91.4
+\end{lstlisting}
+
+\subsection{SLC Implementation}
 
 \end{document}
