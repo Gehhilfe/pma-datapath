@@ -423,5 +423,57 @@ This datapath is partly written in Verilog and SystemVerilog to improve my SV ve
 \end{lstlisting}
 
 \subsection{SLC Implementation}
+The SLC implementation tries to reduce the amount of memory access by forwarding needed values with shared registers. For this approach a family is created for each output row in EX or EX and both outputes are computed at the same time. To compute a single output pixel nine input pixels are needed and to computed the next output pixel in a row six input are overlapping and three new values are needed. Therefore, a single thread is assigned for each output pixel in a row. Each thread need to load threee new values and recevies six values from the previous thread.
+
+\begin{lstlisting}[language=C]
+sl_def(sobel, , 
+	sl_glparm(void*, a),
+	sl_glparm(void*, pex),
+	sl_glparm(void*, pey),
+	sl_glparm(int, row_length),
+	sl_shparm(int, s1), 
+	sl_shparm(int, s2),
+	sl_shparm(int, s3))
+{
+	sl_index(i);
+	
+	const uint8_t *in = sl_getp(a);
+	uint8_t (* restrict ex) = (uint8_t *)(void*)sl_getp(pex);
+	uint8_t (* restrict ey) = (uint8_t *)(void*)sl_getp(pey);
+	uint8_t row_length = sl_getp(row_length);
+	
+	uint32_t ss1 = sl_getp(s1);
+	uint32_t ss2 = sl_getp(s2);
+	uint32_t ss3 = sl_getp(s3);
+	
+	uint8_t p0 = (ss1 & 0xFF);
+	uint8_t p1 = (ss1 & 0xFF00) >> 8;
+	uint8_t p2 = in[i+2];
+	
+	uint8_t p3 = (ss2 & 0xFF);
+	uint8_t p4 = (ss2 & 0xFF00) >> 8;
+	uint8_t p5 = in[i+2+row_length];
+	
+	uint8_t p6 = (ss3 & 0xFF);
+	uint8_t p7 = (ss3 & 0xFF00) >> 8;
+	uint8_t p8 = in[i+2+2*row_length];
+		
+	ss1 = p1 | (p2 << 8);
+	ss2 = p4 | (p5 << 8);
+	ss3 = p7 | (p8 << 8);
+	
+	sl_setp(s1, ss1);
+	sl_setp(s2, ss2);
+	sl_setp(s3, ss3);
+		
+	int16_t exn = (int16_t)p0 - p2 + 2*p3 - 2*p5 + p6 - p8;
+	int16_t eyn = (int16_t)p0 + 2*p1 + p3 - p6 - 2*p7 - p8;
+
+	ex[i] = (uint8_t) ((exn + 4*255)/8);
+	ey[i] = (uint8_t) ((eyn + 4*255)/8);
+}
+sl_enddef
+\end{lstlisting}
+
 
 \end{document}
