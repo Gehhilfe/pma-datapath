@@ -384,23 +384,23 @@ For this i implemented a parameterizable conversion module with the following pa
 \hline
 C\_ROW\_SIZE & The amount of pixels a single row \\ \hline
 p\_dataBits  & The bit width of a single pixel \\ \hline
-p\_rows      & The amount of neighbourhood row need to compute a single result \\ \hline
-p\_cols      & The amount of neighbourhood cols need to compute a single result \\ \hline
+p\_rows      & The amount of neighborhood row need to compute a single result \\ \hline
+p\_cols      & The amount of neighborhood cols need to compute a single result \\ \hline
 \end{tabularx}
 \end{table}
 
 
-The conversion is done by using a shift register chain of $(C\_ROW\_SIZE-1)*p\_rows+p\_cols$ registers. The register chain stores pixel data, a valid flag and sof indicator. The first $p\_cols$ registers in each row is connected to the module output. On reset the registerchain is cleared.
+The conversion is done by using a shift register chain of $(C\_ROW\_SIZE-1)*p\_rows+p\_cols$ registers. The register chain stores pixel data, a valid flag and sof indicator. The first $p\_cols$ registers in each row is connected to the module output. On reset the shift register chain is cleared.
 
 \paragraph{Applying $Gx$ and $Gy$}
-For the parallel  compution of $G_x$ and $G_y$ only three adders are used and none multipliers. From this three adders two are combinded to a three input adders with total latency of six. Four of the six time categories are used for the two postive and two negative partialsums(State Start\_A to Start\_D).  After that the unwind phase is entered. During unwind the last adder is used to do the value range conversion. This happends during the WAIT\_A and WAIT\_B state. The results are outputed during the DONE state until there are consumed. This module can only consume only one neighbourhood vector at a time and is not pipelined and each result computation takes 20 cycles.
+For the parallel  compution of $G_x$ and $G_y$ only three adders are used and none multipliers. From this three adders two are combined to a three input adders with total latency of six. Four of the six time categories are used for the two positive and two negative partialsums(State Start\_A to Start\_D).  After that the unwind phase is entered. During unwind the last adder is used to do the value range conversion. This happens during the WAIT\_A and WAIT\_B state. The results are outputted during the DONE state until there are consumed. This module can only consume only one neighborhood vector at a time and is not pipelined and each result computation takes 20 cycles.
 \begin{figure}[h]
   \centering
   \includegraphics[width=0.5\textwidth]{circofsm.png} 
   \caption{FSM used for computing $G_x$ and $G_y$ with only three adders.}
 \end{figure}
 
-\paragraph{Verfication}
+\paragraph{Verification}
 
 This datapath is partly written in Verilog and SystemVerilog to improve my SV verfication skills. For verification some edge cases are used and random inputs. As edge cases inputs with all pixel equal are used, these should all result in a $G_x = 127, G_y = 127$ result. All results are evaluated agains a gold standard computed by system verilog.
 
@@ -475,5 +475,172 @@ sl_def(sobel, ,
 sl_enddef
 \end{lstlisting}
 
+
+\appendix
+\section{Dynamic Code Traces}
+\begin{lstlisting}[language=, caption={Dynamic code trace for grayscale conversion}]
+   5742 add
+   4416 mov
+   3064 ld
+   2952 subcc
+   2755 ldub
+   2378 sll
+   2036 and
+   2006 st
+   1399 nop
+   1239 srl
+   1200 stb
+   858 be
+   690 sth
+   684 lduh
+   675 sra
+   675 smul
+   662 sub
+   652 bleu
+   620 ba
+   585 std
+   479 call
+   459 save
+   449 restore
+   397 clr
+   396 bgu
+   328 ldd
+   301 sethi
+   298 or
+   258 bl
+   254 retl
+   224 ret
+   220 be,a
+   203 bne,a
+   200 andcc
+   192 bge
+   183 bleu,a
+   133 bne
+   16 clrb
+   8 andn
+   5 ba,a
+   3 jmpl
+   3 jmp
+   3 ble
+   2 ta
+   1 sta
+   1 flush
+   1 bg
+   1 bcc
+\end{lstlisting}
+
+\pagebreak
+
+\begin{lstlisting}[language=, caption={Dynamic code trace for histogram}]
+   7362 add
+   6891 mov
+   4956 ld
+   4883 sll
+   3580 and
+   3403 subcc
+   3264 srl
+   3160 st
+   2736 nop
+   2034 lduh
+   1365 sth
+   1359 ldub
+   975 sethi
+   972 or
+   929 call
+   909 save
+   899 restore
+   887 sub
+   858 be
+   735 stb
+   710 ble
+   704 retl
+   606 ba
+   585 std
+   429 clr
+   396 bleu
+   396 bgu
+   328 ldd
+   258 bl
+   224 ret
+   220 be,a
+   203 bne,a
+   200 andcc
+   192 bge
+   183 bleu,a
+   133 bne
+   8 andn
+   5 ba,a
+   3 jmpl
+   3 jmp
+   2 ta
+   1 sta
+   1 flush
+   1 bg
+   1 bcc
+\end{lstlisting}
+
+
+\pagebreak
+
+\begin{lstlisting}[language=, caption={Dynamic code trace for sobel filter}]
+  11913 mov
+  11119 add
+  10228 subcc
+  9535 ld
+  5976 sll
+  5555 st
+  4614 nop
+  4605 be
+  4112 and
+  3715 srl
+  2656 lduh
+  2370 sethi
+  2341 call
+  2327 ldub
+  1871 andcc
+  1826 save
+  1814 restore
+  1573 sub
+  1510 or
+  1464 sth
+  1398 ba
+  1209 ble
+  1203 retl
+  1172 stb
+  1105 ret
+  1094 clr
+  1001 bne
+  925 be,a
+  807 bne,a
+  784 sra
+  737 bleu
+  645 bl
+  619 std
+  579 bgu
+  469 ldsb
+  346 ldd
+  319 bge
+  307 bcc
+  277 orcc
+  273 bcs
+  224 addcc
+  216 bg
+  183 bleu,a
+  181 bl,a
+  68 jmp
+  62 ldsh
+  61 clrb
+  61 bge,a
+  61 addx
+  39 andn
+  34 jmpl
+  31 ble,a
+  31 bg,a
+  5 ba,a
+  2 ta
+  2 rett
+  1 sta
+  1 flush
+\end{lstlisting}
 
 \end{document}
